@@ -1,0 +1,52 @@
+name: Build APK from download URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      zip_url:
+        description: 'Direct download URL to birabeksen-patched.zip'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download and unzip project
+        run: |
+          curl -L --fail -o project.zip "${{ inputs.zip_url }}"
+          unzip -q project.zip -d project
+          echo "PROJECT_DIR=$(find project -name settings.gradle -maxdepth 2 -printf '%h\n' | head -n 1)" >> $GITHUB_ENV
+          echo "Project dir: $PROJECT_DIR"
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK and CMake
+        run: |
+          sdkmanager "ndk;21.0.6113669" "cmake;3.10.2.4988404"
+
+      - name: Remove local.properties
+        run: rm -f "$PROJECT_DIR/local.properties"
+
+      - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          chmod +x ./gradlew || true
+          ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
