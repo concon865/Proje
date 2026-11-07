@@ -17,7 +17,7 @@ jobs:
 
       - name: Download and unzip project
         run: |
-          curl -L --fail -o project.zip "${{ inputs.zip_url }}"
+          curl -L --fail -k -o project.zip "${{ inputs.zip_url }}"
           unzip -q project.zip -d project
           echo "PROJECT_DIR=$(find project -name settings.gradle -maxdepth 2 -printf '%h\n' | head -n 1)" >> $GITHUB_ENV
           echo "Project dir: $PROJECT_DIR"
